@@ -1,0 +1,26 @@
+.root {
+  display: grid;
+  gap: 8px;
+}
+
+.topRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.value {
+  font-size: 13px;
+  color: var(--color-text);
+  opacity: 0.8;
+}
+
+.range {
+  width: 100%;
+}

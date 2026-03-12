@@ -1,0 +1,39 @@
+:root {
+  --color-bg: #1a1b1d;
+  --color-surface: #202227;
+  --color-surface-2: #0f0d1a;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-text: rgba(255, 255, 255, 0.92);
+  --color-text-muted: rgba(255, 255, 255, 0.64);
+
+  --color-primary: #5b7cfa;
+  --color-danger: #ff4d4f;
+
+  --message-user-bg: rgba(255, 255, 255, 0.274);
+  --message-assistant-bg: rgba(255, 255, 255, 0.06);
+
+  --radius-lg: 14px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
+
+  --shadow-lg: 0 18px 60px rgba(0, 0, 0, 0.35);
+
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --color-bg: #f6f7fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f3f9;
+  --color-border: rgba(17, 24, 39, 0.12);
+  --color-text: rgba(17, 24, 39, 0.92);
+  --color-text-muted: rgba(17, 24, 39, 0.62);
+
+  --color-primary: #355bff;
+  --color-danger: #d9363e;
+
+  --message-user-bg: rgba(53, 91, 255, 0.12);
+  --message-assistant-bg: rgba(17, 24, 39, 0.05);
+
+  color-scheme: light;
+}

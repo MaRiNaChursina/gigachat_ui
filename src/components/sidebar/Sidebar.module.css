@@ -1,0 +1,33 @@
+.root {
+  width: 320px;
+  max-width: 88vw;
+  height: 100%;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.brand {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.newChatBtn {
+  width: 100%;
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  opacity: 0.9;
+}
