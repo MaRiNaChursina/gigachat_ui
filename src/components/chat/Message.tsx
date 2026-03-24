@@ -1,5 +1,5 @@
 import ReactMarkdown from 'react-markdown'
-import type { ChatMessage, MessageRole } from '../../mocks/mockData'
+import type { Message as ChatMessage, MessageRole } from '../../types/message'
 import cls from './Message.module.css'
 
 export type MessageProps = {
@@ -10,6 +10,7 @@ export type MessageProps = {
 
 export function Message({ message, variant, onCopy }: MessageProps) {
   const isUser = variant === 'user'
+  const authorLabel = isUser ? 'Вы' : 'Ассистент'
 
   return (
     <div className={[cls.row, isUser ? cls.rowUser : cls.rowAssistant].join(' ')}>
@@ -26,8 +27,8 @@ export function Message({ message, variant, onCopy }: MessageProps) {
         </button>
 
         <div className={cls.meta}>
-          <div className={cls.author}>{message.authorLabel}</div>
-          <div className={cls.time}>{message.createdAt}</div>
+          <div className={cls.author}>{authorLabel}</div>
+          <div className={cls.time}>{message.timestamp}</div>
         </div>
 
         <div className={cls.content}>

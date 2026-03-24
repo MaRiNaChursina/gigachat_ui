@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { ChatMessage } from '../../mocks/mockData'
+import type { Message as ChatMessage } from '../../types/message'
 import { Message } from './Message'
 import { TypingIndicator } from './TypingIndicator'
 import cls from './MessageList.module.css'
@@ -14,8 +14,8 @@ export function MessageList({ messages, typingVisible, onCopyMessage }: MessageL
   const endRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages.length, typingVisible])
+    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, typingVisible])
 
   return (
     <div className={cls.root}>
@@ -25,7 +25,7 @@ export function MessageList({ messages, typingVisible, onCopyMessage }: MessageL
         ))}
         {typingVisible ? (
           <div className={cls.typingRow}>
-            <TypingIndicator isVisible />
+            <TypingIndicator isVisible={typingVisible} />
           </div>
         ) : null}
         <div ref={endRef} />

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Chat, ChatMessage } from '../../mocks/mockData'
 import { mockChats, mockMessagesByChatId } from '../../mocks/mockData'
 import { getNowTimeLabel, getTodayIsoDate } from '../../shared/lib/time'
@@ -9,7 +9,16 @@ export function useChatState() {
     useState<Record<string, ChatMessage[]>>(mockMessagesByChatId)
   const [activeChatId, setActiveChatId] = useState<string>(mockChats[0]?.id ?? '')
   const [search, setSearch] = useState('')
-  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const responseTimeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (responseTimeoutRef.current !== null) {
+        window.clearTimeout(responseTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const filteredChats = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -56,29 +65,53 @@ export function useChatState() {
     })
   }, [])
 
-  const sendMessage = useCallback(() => {
-    const text = input.trim()
-    if (!text || !activeChat?.id) return
+  const sendMessage = useCallback(
+    (text: string) => {
+      const trimmedText = text.trim()
+      if (!trimmedText || !activeChat?.id || isLoading) return
 
-    const newMsg: ChatMessage = {
-      id: `m${Date.now()}`,
-      role: 'user',
-      authorLabel: 'Вы',
-      createdAt: getNowTimeLabel(),
-      content: text,
-    }
+      if (responseTimeoutRef.current !== null) {
+        window.clearTimeout(responseTimeoutRef.current)
+      }
 
-    setMessagesByChatId((prev) => ({
-      ...prev,
-      [activeChat.id]: [...(prev[activeChat.id] ?? []), newMsg],
-    }))
+      const userMsg: ChatMessage = {
+        id: `m${Date.now()}`,
+        role: 'user',
+        timestamp: getNowTimeLabel(),
+        content: trimmedText,
+      }
 
-    setChats((prev) =>
-      prev.map((c) => (c.id === activeChat.id ? { ...c, lastMessageAt: getTodayIsoDate() } : c)),
-    )
+      setMessagesByChatId((prev) => ({
+        ...prev,
+        [activeChat.id]: [...(prev[activeChat.id] ?? []), userMsg],
+      }))
 
-    setInput('')
-  }, [activeChat?.id, input])
+      setChats((prev) =>
+        prev.map((c) => (c.id === activeChat.id ? { ...c, lastMessageAt: getTodayIsoDate() } : c)),
+      )
+
+      setIsLoading(true)
+      const activeId = activeChat.id
+      const timeoutMs = 1000 + Math.floor(Math.random() * 1000)
+
+      responseTimeoutRef.current = window.setTimeout(() => {
+        const assistantMsg: ChatMessage = {
+          id: `m${Date.now()}-assistant`,
+          role: 'assistant',
+          timestamp: getNowTimeLabel(),
+          content: 'Принял сообщение. Это моковый ответ ассистента для домашнего задания.',
+        }
+
+        setMessagesByChatId((prev) => ({
+          ...prev,
+          [activeId]: [...(prev[activeId] ?? []), assistantMsg],
+        }))
+        setIsLoading(false)
+        responseTimeoutRef.current = null
+      }, timeoutMs)
+    },
+    [activeChat, isLoading],
+  )
 
   return {
     chats: filteredChats,
@@ -87,8 +120,7 @@ export function useChatState() {
     messages,
     search,
     setSearch,
-    input,
-    setInput,
+    isLoading,
     selectChat,
     createChat,
     deleteChat,

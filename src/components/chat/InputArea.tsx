@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../ui/Button'
 import cls from './InputArea.module.css'
 
 export type InputAreaProps = {
-  value: string
-  onChange: (value: string) => void
-  onSend: () => void
+  isLoading: boolean
+  onSend: (text: string) => void
   onStop: () => void
 }
 
-export function InputArea({ value, onChange, onSend, onStop }: InputAreaProps) {
+export function InputArea({ isLoading, onSend, onStop }: InputAreaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const [value, setValue] = useState('')
   const canSend = useMemo(() => value.trim().length > 0, [value])
 
   useEffect(() => {
@@ -42,11 +42,15 @@ export function InputArea({ value, onChange, onSend, onStop }: InputAreaProps) {
             rows={1}
             value={value}
             placeholder="Напишите сообщение…"
-            onChange={(e) => onChange(e.target.value)}
+            disabled={isLoading}
+            onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                if (canSend) onSend()
+                if (canSend && !isLoading) {
+                  onSend(value.trim())
+                  setValue('')
+                }
               }
             }}
           />
@@ -59,10 +63,19 @@ export function InputArea({ value, onChange, onSend, onStop }: InputAreaProps) {
         </div>
 
         <div className={cls.sideButtons}>
-          <Button type="button" variant="ghost" onClick={onStop} title="Стоп (заглушка)">
+          <Button type="button" variant="ghost" onClick={onStop} title="Стоп (заглушка)" disabled={!isLoading}>
             Стоп
           </Button>
-          <Button type="button" variant="primary" disabled={!canSend} onClick={onSend}>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={!canSend || isLoading}
+            onClick={() => {
+              if (!canSend || isLoading) return
+              onSend(value.trim())
+              setValue('')
+            }}
+          >
             Отправить
           </Button>
         </div>

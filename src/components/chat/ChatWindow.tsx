@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../../mocks/mockData'
+import type { Message } from '../../types/message'
 import { EmptyState } from '../empty/EmptyState'
 import { Button } from '../ui/Button'
 import { InputArea } from './InputArea'
@@ -7,11 +7,9 @@ import cls from './ChatWindow.module.css'
 
 export type ChatWindowProps = {
   chatTitle: string
-  messages: ChatMessage[]
-  typingVisible?: boolean
-  inputValue: string
-  onInputChange: (value: string) => void
-  onSend: () => void
+  messages: Message[]
+  isLoading: boolean
+  onSend: (text: string) => void
   onStop: () => void
   onOpenSettings: () => void
   onOpenSidebar?: () => void
@@ -21,9 +19,7 @@ export type ChatWindowProps = {
 export function ChatWindow({
   chatTitle,
   messages,
-  typingVisible,
-  inputValue,
-  onInputChange,
+  isLoading,
   onSend,
   onStop,
   onOpenSettings,
@@ -59,11 +55,11 @@ export function ChatWindow({
         {messages.length === 0 ? (
           <EmptyState />
         ) : (
-          <MessageList messages={messages} typingVisible={typingVisible} onCopyMessage={onCopyMessage} />
+          <MessageList messages={messages} typingVisible={isLoading} onCopyMessage={onCopyMessage} />
         )}
       </div>
 
-      <InputArea value={inputValue} onChange={onInputChange} onSend={onSend} onStop={onStop} />
+      <InputArea isLoading={isLoading} onSend={onSend} onStop={onStop} />
     </section>
   )
 }

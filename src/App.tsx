@@ -49,9 +49,7 @@ export default function App() {
         <ChatWindow
           chatTitle={chat.activeChat?.title ?? 'Чат'}
           messages={chat.messages}
-          typingVisible
-          inputValue={chat.input}
-          onInputChange={chat.setInput}
+          isLoading={chat.isLoading}
           onSend={chat.sendMessage}
           onStop={() => {}}
           onOpenSettings={() => setSettingsOpen(true)}
