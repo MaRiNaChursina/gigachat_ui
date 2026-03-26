@@ -118,6 +118,36 @@
   font-size: 0.9em;
 }
 
+.content :global(.hljs) {
+  background: transparent;
+}
+
+.content :global(.hljs-comment),
+.content :global(.hljs-quote) {
+  color: var(--color-text-muted);
+}
+
+.content :global(.hljs-keyword),
+.content :global(.hljs-selector-tag),
+.content :global(.hljs-literal),
+.content :global(.hljs-doctag) {
+  color: var(--color-primary);
+}
+
+.content :global(.hljs-string),
+.content :global(.hljs-attr),
+.content :global(.hljs-number),
+.content :global(.hljs-meta) {
+  color: var(--color-text);
+}
+
+[data-theme='light'] .content :global(.hljs-string),
+[data-theme='light'] .content :global(.hljs-attr),
+[data-theme='light'] .content :global(.hljs-number),
+[data-theme='light'] .content :global(.hljs-meta) {
+  color: var(--color-text);
+}
+
 .content :global(pre),
 .content :global(code),
 .content :global(a) {

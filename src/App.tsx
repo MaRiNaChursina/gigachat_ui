@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { AuthForm } from './components/auth/AuthForm'
-import { ChatWindow } from './components/chat/ChatWindow'
 import { AppLayout } from './components/layout/AppLayout'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { useAuth } from './features/auth/useAuth'
-import { useChatState } from './features/chat/useChatState'
 import { useSettingsTheme } from './features/settings/useSettingsTheme'
+import { useChatStore } from './state/chat/ChatProvider'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { HomePage } from './pages/HomePage'
+import { ChatPage } from './pages/ChatPage'
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { isAuthed, login, logout } = useAuth()
-  const chat = useChatState()
+  const chat = useChatStore()
   const { settings, setSettings, settingsOpen, setSettingsOpen, defaultSettings } = useSettingsTheme()
+  const navigate = useNavigate()
 
   if (!isAuthed) {
     return <AuthForm onLogin={login} />
@@ -25,19 +28,35 @@ export default function App() {
         onSidebarOpenChange={setSidebarOpen}
         sidebar={
           <Sidebar
-            chats={chat.chats}
-            activeChatId={chat.activeChat?.id}
-            searchValue={chat.search}
+            chats={chat.visibleChats}
+            activeChatId={chat.state.activeChatId ?? undefined}
+            searchValue={chat.state.search}
             onSearchChange={chat.setSearch}
             onSelectChat={(id) => {
-              chat.selectChat(id)
+              chat.setActiveChatId(id)
+              navigate(`/chat/${id}`)
               setSidebarOpen(false)
             }}
             onNewChat={() => {
-              chat.createChat()
+              const id = chat.createChat()
+              navigate(`/chat/${id}`)
               setSidebarOpen(false)
             }}
-            onDeleteChat={chat.deleteChat}
+            onEditChat={(id) => {
+              const current = chat.state.chats.find((c) => c.id === id)
+              const next = window.prompt('Новое название чата:', current?.title ?? '')
+              if (typeof next === 'string') {
+                const title = next.trim()
+                if (title.length > 0) chat.renameChat(id, title)
+              }
+            }}
+            onDeleteChat={(id) => {
+              const ok = window.confirm('Удалить чат?')
+              if (!ok) return
+              const isActive = chat.state.activeChatId === id
+              chat.deleteChat(id)
+              if (isActive) navigate('/', { replace: true })
+            }}
             onLogout={() => {
               logout()
               setSidebarOpen(false)
@@ -46,15 +65,49 @@ export default function App() {
           />
         }
       >
-        <ChatWindow
-          chatTitle={chat.activeChat?.title ?? 'Чат'}
-          messages={chat.messages}
-          isLoading={chat.isLoading}
-          onSend={chat.sendMessage}
-          onStop={chat.stopGeneration}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenSidebar={() => setSidebarOpen(true)}
-        />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomePage
+                onSend={(text) =>
+                  chat.sendMessage(text, {
+                    systemPrompt: settings.systemPrompt,
+                    model: settings.model,
+                    temperature: settings.temperature,
+                    topP: settings.topP,
+                    maxTokens: settings.maxTokens,
+                    stream: true,
+                  })
+                }
+                onStop={chat.stopGeneration}
+                onOpenSettings={() => setSettingsOpen(true)}
+                onOpenSidebar={() => setSidebarOpen(true)}
+              />
+            }
+          />
+          <Route
+            path="/chat/:id"
+            element={
+              <ChatPage
+                onSend={(text) =>
+                  chat.sendMessage(text, {
+                    systemPrompt: settings.systemPrompt,
+                    model: settings.model,
+                    temperature: settings.temperature,
+                    topP: settings.topP,
+                    maxTokens: settings.maxTokens,
+                    stream: true,
+                  })
+                }
+                onStop={chat.stopGeneration}
+                onOpenSettings={() => setSettingsOpen(true)}
+                onOpenSidebar={() => setSidebarOpen(true)}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </AppLayout>
 
       <SettingsPanel

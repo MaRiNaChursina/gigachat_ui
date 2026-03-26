@@ -1,5 +1,7 @@
+import hljs from 'highlight.js'
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import type { ReactNode } from 'react'
 import type { Message as ChatMessage, MessageRole } from '../../types/message'
 import cls from './Message.module.css'
 
@@ -52,7 +54,46 @@ export function Message({ message, variant, onCopy }: MessageProps) {
         </div>
 
         <div className={cls.content}>
-          <ReactMarkdown>{message.content}</ReactMarkdown>
+          <ReactMarkdown
+            components={{
+              code(props) {
+                const p = props as any
+                const inline: boolean | undefined = p.inline
+                const className: string | undefined = typeof p.className === 'string' ? p.className : undefined
+                const children: ReactNode = p.children as ReactNode
+                const restProps = p as Record<string, unknown>
+                delete restProps.inline
+
+                const text = String(children ?? '').replace(/\n$/, '')
+                const language =
+                  typeof className === 'string' && className.startsWith('language-')
+                    ? className.slice('language-'.length)
+                    : ''
+
+                if (inline) {
+                  return (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  )
+                }
+
+                const grammar = language && hljs.getLanguage(language) ? language : undefined
+                const highlighted = grammar ? hljs.highlight(text, { language: grammar }).value : hljs.highlightAuto(text).value
+
+                return (
+                  <pre>
+                    <code
+                      className={['hljs', className].filter(Boolean).join(' ')}
+                      dangerouslySetInnerHTML={{ __html: highlighted }}
+                    />
+                  </pre>
+                )
+              },
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
         </div>
       </div>
 

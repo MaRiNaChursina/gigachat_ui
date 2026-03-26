@@ -11,6 +11,7 @@ export type SidebarProps = {
   onSearchChange: (value: string) => void
   onSelectChat: (chatId: string) => void
   onNewChat: () => void
+  onEditChat?: (chatId: string) => void
   onDeleteChat: (chatId: string) => void
   onLogout: () => void
 }
@@ -22,6 +23,7 @@ export function Sidebar({
   onSearchChange,
   onSelectChat,
   onNewChat,
+  onEditChat,
   onDeleteChat,
   onLogout,
 }: SidebarProps) {
@@ -46,6 +48,7 @@ export function Sidebar({
         chats={chats}
         activeChatId={activeChatId}
         onSelectChat={onSelectChat}
+        onEditChat={onEditChat}
         onDeleteChat={onDeleteChat}
       />
     </aside>
