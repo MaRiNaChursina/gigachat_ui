@@ -113,6 +113,14 @@ export function useChatState() {
     [activeChat, isLoading],
   )
 
+  const stopGeneration = useCallback(() => {
+    if (responseTimeoutRef.current !== null) {
+      window.clearTimeout(responseTimeoutRef.current)
+      responseTimeoutRef.current = null
+    }
+    setIsLoading(false)
+  }, [])
+
   return {
     chats: filteredChats,
     activeChat,
@@ -125,6 +133,7 @@ export function useChatState() {
     createChat,
     deleteChat,
     sendMessage,
+    stopGeneration,
     // also export raw setters if needed later
     setActiveChatId,
   }

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import type { Message as ChatMessage, MessageRole } from '../../types/message'
 import cls from './Message.module.css'
@@ -11,20 +12,39 @@ export type MessageProps = {
 export function Message({ message, variant, onCopy }: MessageProps) {
   const isUser = variant === 'user'
   const authorLabel = isUser ? 'Вы' : 'Ассистент'
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!copied) return
+    const timeoutId = window.setTimeout(() => setCopied(false), 2000)
+    return () => window.clearTimeout(timeoutId)
+  }, [copied])
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content)
+      onCopy?.(message.content)
+      setCopied(true)
+    } catch {
+      setCopied(false)
+    }
+  }
 
   return (
     <div className={[cls.row, isUser ? cls.rowUser : cls.rowAssistant].join(' ')}>
       {!isUser ? <div className={cls.avatar} aria-hidden="true">G</div> : null}
 
       <div className={[cls.bubble, isUser ? cls.bubbleUser : cls.bubbleAssistant].join(' ')}>
-        <button
-          type="button"
-          className={cls.copyBtn}
-          title="Копировать"
-          onClick={() => onCopy?.(message.content)}
-        >
-          ⧉
-        </button>
+        {!isUser ? (
+          <button
+            type="button"
+            className={[cls.copyBtn, copied ? cls.copyBtnDone : ''].join(' ')}
+            title="Копировать"
+            onClick={handleCopy}
+          >
+            {copied ? 'Скопировано' : 'Копировать'}
+          </button>
+        ) : null}
 
         <div className={cls.meta}>
           <div className={cls.author}>{authorLabel}</div>

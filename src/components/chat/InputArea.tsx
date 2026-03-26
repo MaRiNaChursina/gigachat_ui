@@ -42,7 +42,6 @@ export function InputArea({ isLoading, onSend, onStop }: InputAreaProps) {
             rows={1}
             value={value}
             placeholder="Напишите сообщение…"
-            disabled={isLoading}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -63,21 +62,24 @@ export function InputArea({ isLoading, onSend, onStop }: InputAreaProps) {
         </div>
 
         <div className={cls.sideButtons}>
-          <Button type="button" variant="ghost" onClick={onStop} title="Стоп (заглушка)" disabled={!isLoading}>
-            Стоп
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            disabled={!canSend || isLoading}
-            onClick={() => {
-              if (!canSend || isLoading) return
-              onSend(value.trim())
-              setValue('')
-            }}
-          >
-            Отправить
-          </Button>
+          {isLoading ? (
+            <Button type="button" variant="ghost" onClick={onStop} title="Остановить генерацию">
+              Стоп
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="primary"
+              disabled={!canSend}
+              onClick={() => {
+                if (!canSend) return
+                onSend(value.trim())
+                setValue('')
+              }}
+            >
+              Отправить
+            </Button>
+          )}
         </div>
       </div>
     </div>

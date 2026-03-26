@@ -51,10 +51,9 @@ export default function App() {
           messages={chat.messages}
           isLoading={chat.isLoading}
           onSend={chat.sendMessage}
-          onStop={() => {}}
+          onStop={chat.stopGeneration}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenSidebar={() => setSidebarOpen(true)}
-          onCopyMessage={(text) => navigator.clipboard?.writeText(text)}
         />
       </AppLayout>
 
