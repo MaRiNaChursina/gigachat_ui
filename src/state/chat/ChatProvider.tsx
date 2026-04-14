@@ -17,6 +17,7 @@ export type ChatStoreValue = {
   deleteChat: (chatId: string) => void
   sendMessage: (text: string, params: Omit<ChatSendMessageParams, 'text'>) => Promise<void>
   stopGeneration: () => void
+  clearError: () => void
 }
 
 const ChatContext = createContext<ChatStoreValue | null>(null)
@@ -110,6 +111,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     abortControllerRef.current?.abort()
     abortControllerRef.current = null
     dispatch({ type: 'SET_LOADING', payload: false })
+  }, [])
+
+  const clearError = useCallback(() => {
+    dispatch({ type: 'SET_ERROR', payload: null })
   }, [])
 
   const sendMessage = useCallback(
@@ -238,9 +243,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     return state.chats.filter((c) => {
       if (c.title.toLowerCase().includes(q)) return true
-      const lastMsg = c.messages[c.messages.length - 1]
-      if (lastMsg?.content?.toLowerCase().includes(q)) return true
-      return false
+      return (c.messages ?? []).some((m) => m.content?.toLowerCase().includes(q) ?? false)
     })
   }, [state.chats, state.search])
 
@@ -255,8 +258,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       deleteChat,
       sendMessage,
       stopGeneration,
+      clearError,
     }
-  }, [filteredChats, state, setSearch, setActiveChatId, createChat, renameChat, deleteChat, sendMessage, stopGeneration])
+  }, [
+    filteredChats,
+    state,
+    setSearch,
+    setActiveChatId,
+    createChat,
+    renameChat,
+    deleteChat,
+    sendMessage,
+    stopGeneration,
+    clearError,
+  ])
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
 }

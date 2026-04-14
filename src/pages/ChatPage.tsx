@@ -38,6 +38,7 @@ export function ChatPage({ onSend, onStop, onOpenSettings, onOpenSidebar }: Chat
 
   return (
     <ChatWindow
+      chatId={id}
       chatTitle={activeChat?.title ?? 'Чат'}
       messages={activeChat?.messages ?? []}
       isLoading={chat.state.isLoading}

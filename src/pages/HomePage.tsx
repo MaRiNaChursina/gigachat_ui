@@ -14,6 +14,7 @@ export function HomePage({ onSend, onStop, onOpenSettings, onOpenSidebar }: Home
 
   return (
     <ChatWindow
+      chatId={chat.state.activeChatId ?? undefined}
       chatTitle={activeChat?.title ?? 'Чат'}
       messages={activeChat?.messages ?? []}
       isLoading={chat.state.isLoading}

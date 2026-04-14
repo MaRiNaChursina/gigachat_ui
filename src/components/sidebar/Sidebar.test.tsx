@@ -4,20 +4,28 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Sidebar } from './Sidebar'
 import type { Chat } from '../../mocks/mockData'
+import type { Message } from '../../types/message'
 
-const sampleChats: Chat[] = [
+type ChatRow = Chat & { messages?: Message[] }
+
+const sampleChats: ChatRow[] = [
   { id: 'c1', title: 'План на семестр', lastMessageAt: '2026-03-12' },
   { id: 'c2', title: 'Идеи для проекта', lastMessageAt: '2026-03-11' },
   { id: 'c3', title: 'Краткий конспект: JSX', lastMessageAt: '2026-03-10' },
 ]
 
-function SidebarHarness({ initialChats }: { initialChats: Chat[] }) {
+function filterChatsBySearch(chats: ChatRow[], search: string) {
+  const q = search.trim().toLowerCase()
+  if (!q) return chats
+  return chats.filter((c) => {
+    if (c.title.toLowerCase().includes(q)) return true
+    return (c.messages ?? []).some((m) => m.content?.toLowerCase().includes(q) ?? false)
+  })
+}
+
+function SidebarHarness({ initialChats }: { initialChats: ChatRow[] }) {
   const [search, setSearch] = useState('')
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return initialChats
-    return initialChats.filter((c) => c.title.toLowerCase().includes(q))
-  }, [search, initialChats])
+  const visible = useMemo(() => filterChatsBySearch(initialChats, search), [search, initialChats])
 
   return (
     <Sidebar
@@ -50,6 +58,32 @@ describe('Sidebar', () => {
     expect(screen.getByText('Краткий конспект: JSX')).toBeInTheDocument()
     expect(screen.queryByText('План на семестр')).not.toBeInTheDocument()
     expect(screen.queryByText('Идеи для проекта')).not.toBeInTheDocument()
+  })
+
+  it('filters chat list by search text (message body match)', async () => {
+    const user = userEvent.setup()
+    const chats: ChatRow[] = [
+      {
+        id: 'c1',
+        title: 'Без совпадения в названии',
+        lastMessageAt: '2026-03-12',
+        messages: [
+          { id: 'm1', role: 'user', content: 'Обсуждали useMemo и производительность', timestamp: '10:00' },
+        ],
+      },
+      {
+        id: 'c2',
+        title: 'Другой диалог',
+        lastMessageAt: '2026-03-11',
+        messages: [{ id: 'm2', role: 'assistant', content: 'Короткий ответ', timestamp: '11:00' }],
+      },
+    ]
+    render(<SidebarHarness initialChats={chats} />)
+
+    await user.type(screen.getByPlaceholderText('Поиск по чатам…'), 'usememo')
+
+    expect(screen.getByText('Без совпадения в названии')).toBeInTheDocument()
+    expect(screen.queryByText('Другой диалог')).not.toBeInTheDocument()
   })
 
   it('clicking delete triggers confirmation (handler as in App)', async () => {

@@ -24,6 +24,50 @@ type GigachatStreamEvent =
     }
   | [string]
 
+/**
+ * В dev Vite проксирует на Sber (vite.config).
+ * В prod — тот же origin `/api/gigachat/*` (serverless на Vercel, см. `api/gigachat/`), иначе CORS.
+ * Для статики без API (например только GitHub Pages) задайте полный URL прокси: VITE_GIGACHAT_PROXY_BASE.
+ */
+function gigachatProxyBase(): string {
+  const custom = (import.meta.env.VITE_GIGACHAT_PROXY_BASE as string | undefined)?.trim()
+  if (custom) return custom.replace(/\/$/, '')
+  if (import.meta.env.DEV) return ''
+  return '/api/gigachat'
+}
+
+function gigachatOAuthUrl() {
+  if (import.meta.env.DEV) return '/__proxy/gigachat/oauth'
+  return `${gigachatProxyBase()}/oauth`
+}
+
+function gigachatChatCompletionsUrl() {
+  if (import.meta.env.DEV) return '/__proxy/gigachat/api/v1/chat/completions'
+  return `${gigachatProxyBase()}/v1/chat/completions`
+}
+
+/** Убирает типичные ошибки .env: пробелы, CRLF, лишний префикс Basic, кавычки; при необходимости кодирует «id:secret» в Base64. */
+export function normalizeGigachatAuthorizationKey(raw: string): string {
+  let k = raw.trim().replace(/\r?\n/g, '')
+  if ((k.startsWith('"') && k.endsWith('"')) || (k.startsWith("'") && k.endsWith("'"))) {
+    k = k.slice(1, -1).trim()
+  }
+  if (/^basic\s+/i.test(k)) {
+    k = k.replace(/^basic\s+/i, '').trim()
+  }
+  // В кабинете дают готовый Base64; если вставили сырую пару client_id:client_secret:
+  const looksLikeIdSecretPair = /^[\w.-]+:[\w.-]+$/.test(k) && k.length < 120 && !/[+/]{2}/.test(k)
+  if (looksLikeIdSecretPair && typeof btoa === 'function') {
+    k = btoa(k)
+  }
+  return k.trim()
+}
+
+function normalizeScope(raw: string | undefined, fallback: string) {
+  const s = (raw ?? fallback).trim()
+  return s.length > 0 ? s : fallback
+}
+
 export async function gigachatChatCompletion({
   model,
   messages,
@@ -34,16 +78,18 @@ export async function gigachatChatCompletion({
   abortController,
   onDelta,
 }: GigachatChatCompletionParams): Promise<{ text: string }> {
-  const authorizationKey = import.meta.env.VITE_GIGACHAT_AUTHORIZATION_KEY as string | undefined
-  const scope = (import.meta.env.VITE_GIGACHAT_SCOPE as string | undefined) ?? 'GIGACHAT_API_PERS'
+  const rawKey = import.meta.env.VITE_GIGACHAT_AUTHORIZATION_KEY as string | undefined
+  const scope = normalizeScope(import.meta.env.VITE_GIGACHAT_SCOPE as string | undefined, 'GIGACHAT_API_PERS')
 
-  if (!authorizationKey) {
+  if (!rawKey?.trim()) {
     throw new Error('Не задана переменная окружения VITE_GIGACHAT_AUTHORIZATION_KEY')
   }
 
+  const authorizationKey = normalizeGigachatAuthorizationKey(rawKey)
+
   const token = await getAccessToken({ authorizationKey, scope })
 
-  const res = await fetch('https://gigachat.devices.sberbank.ru/api/v1/chat/completions', {
+  const res = await fetch(gigachatChatCompletionsUrl(), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -126,7 +172,7 @@ export async function gigachatChatCompletion({
 async function getAccessToken({ authorizationKey, scope }: { authorizationKey: string; scope: string }) {
   const rqUID = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}`
 
-  const res = await fetch('https://ngw.devices.sberbank.ru:9443/api/v2/oauth', {
+  const res = await fetch(gigachatOAuthUrl(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -137,9 +183,13 @@ async function getAccessToken({ authorizationKey, scope }: { authorizationKey: s
     body: new URLSearchParams({ scope }),
   })
 
-  if (!res.ok) {
+   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`GigaChat token error ${res.status}: ${text || res.statusText}`)
+    const hint =
+      res.status === 500
+        ? ' Проверьте ключ (одна строка Base64 из кабинета, без «Basic »), VITE_GIGACHAT_SCOPE (часто GIGACHAT_API_PERS), что ключ не отозван и dev-сервер перезапущен после правки .env.'
+        : ''
+    throw new Error(`GigaChat token error ${res.status}: ${text || res.statusText}.${hint}`)
   }
 
   const json = (await res.json()) as any

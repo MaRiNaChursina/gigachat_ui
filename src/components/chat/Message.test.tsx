@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import { Suspense, type ReactElement } from 'react'
 import { describe, expect, it } from 'vitest'
 import { Message } from './Message'
 import cls from './Message.module.css'
@@ -11,31 +12,42 @@ const baseMessage: Msg = {
   timestamp: '12:00',
 }
 
-describe('Message', () => {
-  it('variant=user: shows message text and user CSS classes', () => {
-    const { container } = render(<Message message={{ ...baseMessage, content: 'Plain text' }} variant="user" />)
+function renderMessage(ui: ReactElement) {
+  return render(<Suspense fallback={null}>{ui}</Suspense>)
+}
 
-    expect(screen.getByText('Plain text')).toBeInTheDocument()
+describe('Message', () => {
+  it('variant=user: shows message text and user CSS classes', async () => {
+    const { container } = renderMessage(<Message message={{ ...baseMessage, content: 'Plain text' }} variant="user" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Plain text')).toBeInTheDocument()
+    })
     const root = container.firstElementChild as HTMLElement
     expect(root.className).toContain(cls.rowUser)
     expect(screen.getByText('Plain text').closest(`.${cls.bubble}`)?.className).toContain(cls.bubbleUser)
   })
 
-  it('variant=assistant: shows message text and assistant CSS classes', () => {
-    const { container } = render(<Message message={{ ...baseMessage, content: 'Answer' }} variant="assistant" />)
+  it('variant=assistant: shows message text and assistant CSS classes', async () => {
+    const { container } = renderMessage(<Message message={{ ...baseMessage, content: 'Answer' }} variant="assistant" />)
 
-    expect(screen.getByText('Answer')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Answer')).toBeInTheDocument()
+    })
     const root = container.firstElementChild as HTMLElement
     expect(root.className).toContain(cls.rowAssistant)
     expect(screen.getByText('Answer').closest(`.${cls.bubble}`)?.className).toContain(cls.bubbleAssistant)
   })
 
-  it('shows «Копировать» only for assistant messages', () => {
-    const { unmount: unmountUser } = render(<Message message={baseMessage} variant="user" />)
+  it('shows «Копировать» only for assistant messages', async () => {
+    const { unmount: unmountUser } = renderMessage(<Message message={baseMessage} variant="user" />)
+    await waitFor(() => expect(screen.getByText(/Hello/)).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: 'Копировать' })).not.toBeInTheDocument()
     unmountUser()
 
-    render(<Message message={{ ...baseMessage, content: 'X' }} variant="assistant" />)
-    expect(screen.getByRole('button', { name: 'Копировать' })).toBeInTheDocument()
+    renderMessage(<Message message={{ ...baseMessage, content: 'X' }} variant="assistant" />)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Копировать' })).toBeInTheDocument()
+    })
   })
 })

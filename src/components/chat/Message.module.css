@@ -90,6 +90,11 @@
   border-color: var(--color-primary);
 }
 
+.mdFallback {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .content {
   font-size: 14px;
 }

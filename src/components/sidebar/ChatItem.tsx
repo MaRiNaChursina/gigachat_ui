@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import cls from './ChatItem.module.css'
 import type { Chat } from '../../mocks/mockData'
 
@@ -9,7 +10,7 @@ export type ChatItemProps = {
   onDelete?: (chatId: string) => void
 }
 
-export function ChatItem({ chat, active, onSelect, onEdit, onDelete }: ChatItemProps) {
+export const ChatItem = memo(function ChatItem({ chat, active, onSelect, onEdit, onDelete }: ChatItemProps) {
   return (
     <div
       className={[cls.root, active ? cls.active : undefined].filter(Boolean).join(' ')}
@@ -34,7 +35,7 @@ export function ChatItem({ chat, active, onSelect, onEdit, onDelete }: ChatItemP
             onEdit?.(chat.id)
           }}
         >
-          ✎
+          {'\u270E'}
         </button>
         <button
           className={[cls.actionBtn, cls.actionDanger].join(' ')}
@@ -45,10 +46,9 @@ export function ChatItem({ chat, active, onSelect, onEdit, onDelete }: ChatItemP
             onDelete?.(chat.id)
           }}
         >
-          🗑
+          {'\uD83D\uDDD1'}
         </button>
       </div>
     </div>
   )
-}
-
+})

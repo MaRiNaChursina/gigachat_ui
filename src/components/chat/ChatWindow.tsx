@@ -1,11 +1,16 @@
+import { useState } from 'react'
 import type { Message } from '../../types/message'
+import { useChatStore } from '../../state/chat/ChatProvider'
+import { ErrorBoundary } from '../ErrorBoundary'
 import { EmptyState } from '../empty/EmptyState'
 import { Button } from '../ui/Button'
+import { ErrorMessage } from '../ui/ErrorMessage'
 import { InputArea } from './InputArea'
 import { MessageList } from './MessageList'
 import cls from './ChatWindow.module.css'
 
 export type ChatWindowProps = {
+  chatId?: string
   chatTitle: string
   messages: Message[]
   isLoading: boolean
@@ -17,6 +22,7 @@ export type ChatWindowProps = {
 }
 
 export function ChatWindow({
+  chatId,
   chatTitle,
   messages,
   isLoading,
@@ -26,6 +32,9 @@ export function ChatWindow({
   onOpenSidebar,
   onCopyMessage,
 }: ChatWindowProps) {
+  const { state, clearError } = useChatStore()
+  const [messageListErrorKey, setMessageListErrorKey] = useState(0)
+
   return (
     <section className={cls.root} aria-label="Чат">
       <header className={cls.header}>
@@ -39,7 +48,7 @@ export function ChatWindow({
             onClick={onOpenSidebar}
             disabled={!onOpenSidebar}
           >
-            ☰
+            {'\u2630'}
           </Button>
           <div className={cls.title} title={chatTitle}>
             {chatTitle}
@@ -47,7 +56,7 @@ export function ChatWindow({
         </div>
 
         <Button type="button" variant="ghost" iconOnly title="Настройки" onClick={onOpenSettings}>
-          ⚙
+          {'\u2699'}
         </Button>
       </header>
 
@@ -55,12 +64,30 @@ export function ChatWindow({
         {messages.length === 0 ? (
           <EmptyState />
         ) : (
-          <MessageList messages={messages} typingVisible={isLoading} onCopyMessage={onCopyMessage} />
+          <ErrorBoundary
+            key={`${chatId ?? 'default'}-${messageListErrorKey}`}
+            fallback={
+              <div className={cls.messageError}>
+                <p className={cls.messageErrorText}>Не удалось отобразить сообщения.</p>
+                <Button type="button" variant="primary" onClick={() => setMessageListErrorKey((k) => k + 1)}>
+                  Повторить
+                </Button>
+              </div>
+            }
+          >
+            <MessageList messages={messages} typingVisible={isLoading} onCopyMessage={onCopyMessage} />
+          </ErrorBoundary>
         )}
       </div>
 
-      <InputArea isLoading={isLoading} onSend={onSend} onStop={onStop} />
+      <div className={cls.footer}>
+        <InputArea isLoading={isLoading} onSend={onSend} onStop={onStop} />
+        {state.error ? (
+          <div className={cls.apiError}>
+            <ErrorMessage message={state.error} onRetry={clearError} />
+          </div>
+        ) : null}
+      </div>
     </section>
   )
 }
-
