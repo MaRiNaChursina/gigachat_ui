@@ -7,12 +7,35 @@ function cors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, RqUID, Accept')
 }
 
+/** Как `normalizeGigachatAuthorizationKey` во фронте: кавычки, Basic, пробелы; при необходимости base64 для пары id:secret. */
 function normalizeAuthValue(raw: string | undefined) {
   if (!raw) return ''
   let v = raw.trim()
-  if (/^basic\b/i.test(v)) v = v.replace(/^basic\b\s*/i, '')
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+    v = v.slice(1, -1).trim()
+  }
+  if (/^basic\b/i.test(v)) v = v.replace(/^basic\b\s*/i, '').trim()
   v = v.replace(/\s+/g, '')
-  return v
+  const looksLikeIdSecretPair =
+    /^[\w.-]+:[\w.-]+$/.test(v) && v.length < 120 && !/[+/]{2}/.test(v)
+  if (looksLikeIdSecretPair) {
+    v = Buffer.from(v, 'utf8').toString('base64')
+  }
+  return v.trim()
+}
+
+function scopeFromRequestBody(body: unknown): string {
+  if (typeof body === 'object' && body !== null && 'scope' in body) {
+    return String((body as Record<string, unknown>).scope ?? '')
+  }
+  if (typeof body === 'string' && body.length > 0) {
+    try {
+      return new URLSearchParams(body).get('scope') ?? ''
+    } catch {
+      return ''
+    }
+  }
+  return ''
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -24,10 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).end('Method Not Allowed')
   }
 
-  const reqScope =
-    typeof req.body === 'object' && req.body && 'scope' in req.body
-      ? String((req.body as Record<string, unknown>).scope ?? '')
-      : ''
+  const reqScope = scopeFromRequestBody(req.body)
   const scope = reqScope || process.env.VITE_GIGACHAT_SCOPE || 'GIGACHAT_API_PERS'
   const bodyString = new URLSearchParams({ scope }).toString()
 
