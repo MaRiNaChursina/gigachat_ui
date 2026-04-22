@@ -11,6 +11,7 @@ export type SettingsState = {
   temperature: number
   topP: number
   maxTokens: number
+  repetitionPenalty: number
   systemPrompt: string
   theme: ThemeId
 }
@@ -77,6 +78,16 @@ export function SettingsPanel({ open, value, onChange, onClose, onSave, onReset 
             step={0.01}
             value={value.topP}
             onChange={(v) => onChange({ ...value, topP: v })}
+            formatValue={(v) => v.toFixed(2)}
+          />
+
+          <Slider
+            label="Repetition penalty"
+            min={0}
+            max={2}
+            step={0.01}
+            value={value.repetitionPenalty}
+            onChange={(v) => onChange({ ...value, repetitionPenalty: v })}
             formatValue={(v) => v.toFixed(2)}
           />
 

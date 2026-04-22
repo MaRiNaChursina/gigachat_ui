@@ -113,4 +113,47 @@ describe('Sidebar', () => {
 
     confirmSpy.mockRestore()
   })
+
+  it('clicking edit calls edit handler', async () => {
+    const user = userEvent.setup()
+    const onEditChat = vi.fn()
+
+    render(
+      <Sidebar
+        chats={sampleChats}
+        searchValue=""
+        onSearchChange={vi.fn()}
+        onSelectChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onEditChat={onEditChat}
+        onDeleteChat={vi.fn()}
+        onLogout={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getAllByLabelText('Редактировать чат')[0])
+
+    expect(onEditChat).toHaveBeenCalledWith('c1')
+  })
+
+  it('double click chat item calls edit handler', async () => {
+    const user = userEvent.setup()
+    const onEditChat = vi.fn()
+
+    render(
+      <Sidebar
+        chats={sampleChats}
+        searchValue=""
+        onSearchChange={vi.fn()}
+        onSelectChat={vi.fn()}
+        onNewChat={vi.fn()}
+        onEditChat={onEditChat}
+        onDeleteChat={vi.fn()}
+        onLogout={vi.fn()}
+      />,
+    )
+
+    await user.dblClick(screen.getByText('План на семестр'))
+    expect(onEditChat).toHaveBeenCalledWith('c1')
+  })
 })

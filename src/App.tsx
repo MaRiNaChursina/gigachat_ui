@@ -60,6 +60,7 @@ export default function App() {
       temperature: settings.temperature,
       topP: settings.topP,
       maxTokens: settings.maxTokens,
+      repetitionPenalty: settings.repetitionPenalty,
       stream: true as const,
     }),
     [
@@ -68,6 +69,7 @@ export default function App() {
       settings.temperature,
       settings.topP,
       settings.maxTokens,
+      settings.repetitionPenalty,
     ],
   )
 

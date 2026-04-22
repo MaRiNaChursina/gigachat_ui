@@ -41,6 +41,7 @@ export type ChatSendMessageParams = {
   temperature?: number
   topP?: number
   maxTokens?: number
+  repetitionPenalty?: number
   stream?: boolean
 }
 

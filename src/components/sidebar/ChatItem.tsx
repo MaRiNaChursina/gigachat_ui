@@ -11,14 +11,28 @@ export type ChatItemProps = {
 }
 
 export const ChatItem = memo(function ChatItem({ chat, active, onSelect, onEdit, onDelete }: ChatItemProps) {
+  const handleEdit = (e?: { stopPropagation: () => void; preventDefault?: () => void }) => {
+    e?.stopPropagation()
+    e?.preventDefault?.()
+    onEdit?.(chat.id)
+  }
+
   return (
     <div
       className={[cls.root, active ? cls.active : undefined].filter(Boolean).join(' ')}
       role="button"
       tabIndex={0}
       onClick={() => onSelect(chat.id)}
+      onDoubleClick={() => onEdit?.(chat.id)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onSelect(chat.id)
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect(chat.id)
+        }
+        if (e.key === 'F2') {
+          e.preventDefault()
+          onEdit?.(chat.id)
+        }
       }}
     >
       <div className={cls.title} title={chat.title}>
@@ -30,10 +44,9 @@ export const ChatItem = memo(function ChatItem({ chat, active, onSelect, onEdit,
           className={cls.actionBtn}
           type="button"
           title="Редактировать"
-          onClick={(e) => {
-            e.stopPropagation()
-            onEdit?.(chat.id)
-          }}
+          aria-label="Редактировать чат"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={handleEdit}
         >
           {'\u270E'}
         </button>
@@ -41,6 +54,8 @@ export const ChatItem = memo(function ChatItem({ chat, active, onSelect, onEdit,
           className={[cls.actionBtn, cls.actionDanger].join(' ')}
           type="button"
           title="Удалить"
+          aria-label="Удалить чат"
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation()
             onDelete?.(chat.id)

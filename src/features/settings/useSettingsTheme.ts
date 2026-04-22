@@ -6,6 +6,7 @@ const defaultSettings: SettingsState = {
   temperature: 0.7,
   topP: 0.9,
   maxTokens: 2048,
+  repetitionPenalty: 1,
   systemPrompt: '',
   theme: 'dark',
 }

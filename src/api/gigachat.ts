@@ -9,6 +9,7 @@ export type GigachatChatCompletionParams = {
   temperature?: number
   topP?: number
   maxTokens?: number
+  repetitionPenalty?: number
   abortController: AbortController
   onDelta?: (chunk: string) => void
 }
@@ -48,13 +49,15 @@ function gigachatChatCompletionsUrl() {
 
 /** Убирает типичные ошибки .env: пробелы, CRLF, лишний префикс Basic, кавычки; при необходимости кодирует «id:secret» в Base64. */
 export function normalizeGigachatAuthorizationKey(raw: string): string {
-  let k = raw.trim().replace(/\r?\n/g, '')
+  let k = raw.trim()
   if ((k.startsWith('"') && k.endsWith('"')) || (k.startsWith("'") && k.endsWith("'"))) {
     k = k.slice(1, -1).trim()
   }
-  if (/^basic\s+/i.test(k)) {
-    k = k.replace(/^basic\s+/i, '').trim()
+  if (/^basic\b/i.test(k)) {
+    k = k.replace(/^basic\b\s*/i, '').trim()
   }
+  // Иногда ключ копируется с переносами/пробелами из UI — удаляем всю whitespace-разметку.
+  k = k.replace(/\s+/g, '')
   // В кабинете дают готовый Base64; если вставили сырую пару client_id:client_secret:
   const looksLikeIdSecretPair = /^[\w.-]+:[\w.-]+$/.test(k) && k.length < 120 && !/[+/]{2}/.test(k)
   if (looksLikeIdSecretPair && typeof btoa === 'function') {
@@ -75,6 +78,7 @@ export async function gigachatChatCompletion({
   temperature,
   topP,
   maxTokens,
+  repetitionPenalty,
   abortController,
   onDelta,
 }: GigachatChatCompletionParams): Promise<{ text: string }> {
@@ -103,6 +107,7 @@ export async function gigachatChatCompletion({
       temperature,
       top_p: topP,
       max_tokens: maxTokens,
+      repetition_penalty: repetitionPenalty ?? 1,
       update_interval: 0,
     }),
     signal: abortController.signal,
@@ -183,7 +188,7 @@ async function getAccessToken({ authorizationKey, scope }: { authorizationKey: s
     body: new URLSearchParams({ scope }),
   })
 
-   if (!res.ok) {
+  if (!res.ok) {
     const text = await res.text().catch(() => '')
     const hint =
       res.status === 500

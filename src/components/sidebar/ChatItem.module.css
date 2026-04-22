@@ -39,11 +39,16 @@
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  opacity: 0;
+  opacity: 0.8;
   transition: opacity 120ms ease;
 }
 
 .root:hover .actions {
+  opacity: 1;
+}
+
+.root:focus-within .actions,
+.active .actions {
   opacity: 1;
 }
 
@@ -61,6 +66,12 @@
 
 .actionBtn:hover {
   border-color: rgba(255, 255, 255, 0.22);
+}
+
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+  }
 }
 
 .actionDanger {

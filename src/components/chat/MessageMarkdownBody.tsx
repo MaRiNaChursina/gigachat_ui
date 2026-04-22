@@ -10,6 +10,13 @@ export default function MessageMarkdownBody({ content }: MessageMarkdownBodyProp
   return (
     <ReactMarkdown
       components={{
+        a({ href, children, ...rest }) {
+          return (
+            <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>
+              {children}
+            </a>
+          )
+        },
         code(props) {
           const p = props as {
             inline?: boolean

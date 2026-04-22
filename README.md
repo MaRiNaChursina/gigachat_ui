@@ -1,79 +1,86 @@
 # GigaChat UI
 
-Клиент чата на React + TypeScript (Vite) с ответами GigaChat API, ленивой загрузкой экранов и изоляцией ошибок.
+Интерфейс чата в стиле ChatGPT на `React + TypeScript + Vite` с интеграцией GigaChat API, стримингом ответа (SSE), историей чатов и настройками модели.
 
 ## Демо
 
-**Хостинги:**  Vercel — `https://YOUR_PROJECT.vercel.app`
-
-**Скриншот:** анализ бандла — `docs/bundle-analysis.png` (интерактивный отчёт: `npm run analyze` → `docs/bundle-stats.html`).
-
-Краткая запись экрана или дополнительные скриншоты работы чата можно добавить в этот раздел после публикации.
+- **Репозиторий:** `https://github.com/<username>/<repo>`
+- **Публичное приложение:** `https://YOUR_PROJECT.vercel.app`
+- **Скриншоты/видео работы:** добавьте сюда 2-4 скриншота или ссылку на запись экрана.
+- **Скриншот анализа бандла:** `docs/bundle-analysis.png`
 
 ## Стек
 
-| Технология | Версия (см. `package.json`) |
-| ----------------- | ----------------------------- |
-| React             | ^18.2.0                       |
-| TypeScript        | ~5.9.3                        |
-| Vite              | ^5.4.0                        |
-| React Router DOM  | ^7.13.2                       |
-| Состояние чата    | React Context + `useReducer` (`ChatProvider`) |
-| Стили | CSS Modules                   |
-| Markdown / код    | `react-markdown`, `highlight.js` (отдельные чанки) |
+| Технология | Версия |
+| ---------- | ------ |
+| React | `^18.2.0` |
+| TypeScript | `~5.9.3` |
+| Vite | `^5.4.0` |
+| React Router DOM | `^7.13.2` |
+| State management | `Context API + useReducer` |
+| HTTP | `Fetch API` |
+| Markdown | `react-markdown` |
+| Подсветка кода | `highlight.js` |
+| Стили | `CSS Modules` |
+| Тесты | `Vitest + Testing Library` |
 
 ## Запуск локально
 
-1. Клонировать репозиторий и перейти в каталог проекта:
+1. Клонировать репозиторий:
    ```bash
-   git clone <URL_репозитория>
+   git clone https://github.com/<username>/<repo>.git
    cd frontend
    ```
 2. Установить зависимости:
    ```bash
    npm install
    ```
-3. Создать файл `.env` по образцу `.env.example` и заполнить переменные (без коммита секретов).
-4. Запустить dev-сервер:
+3. Создать `.env` на основе `.env.example` и заполнить переменные.
+4. Запустить приложение:
    ```bash
    npm run dev
    ```
 
-**GigaChat и «Failed to fetch»:** запросы с страницы в браузере к `*.sberbank.ru` без своего backend блокируются **CORS**. В режиме `npm run dev` Vite **проксирует** OAuth и чат (см. `vite.config.ts`, префикс `/__proxy/gigachat/…`). Статическая выкладка (GitHub Pages и т.п.) без прокси снова упирается в CORS — нужен серверный прокси или serverless-функция.
-
-Сборка продакшена: `npm run build`. Просмотр сборки: `npm run preview`.
-
-Анализ бандла (treemap + отчёт в `docs/bundle-stats.html`):
+Дополнительные команды:
 
 ```bash
+npm run build
+npm run preview
+npm test
 npm run analyze
 ```
 
-Скриншот визуализатора в `docs/bundle-analysis.png` (нужен Chromium для Playwright):
-
-```bash
-npx playwright install chromium
-npm run docs:bundle-png
-```
-
-## Env (переменные окружения)
+## Env
 
 | Переменная | Описание |
 | ---------- | -------- |
-| `VITE_GIGACHAT_AUTHORIZATION_KEY` | Base64-строка для заголовка `Authorization: Basic …` при запросе OAuth-токена GigaChat. В код не вшивать. |
-| `VITE_GIGACHAT_SCOPE` | Область OAuth (по умолчанию `GIGACHAT_API_PERS`). |
-| `VITE_BASE_PATH` | Базовый URL-путь приложения при сборке (локально или CI). На GitHub Pages workflow по умолчанию задаёт `/<имя-репозитория>/`. Для сайта с корня `username.github.io` задайте переменную репозитория `VITE_BASE_PATH` = `/`. |
-| `VITE_GIGACHAT_PROXY_BASE` | Опционально: полный URL прокси (`…/api/gigachat`), если фронт на статике (GitHub Pages), а serverless с тем же кодом задеплоен на Vercel. На одном Vercel-проекте не нужен — используется `/api/gigachat` по умолчанию. |
+| `VITE_GIGACHAT_AUTHORIZATION_KEY` | Authorization Key (base64) для получения OAuth токена GigaChat. Передавать без префикса `Basic `. |
+| `VITE_GIGACHAT_SCOPE` | Scope для OAuth. Обычно `GIGACHAT_API_PERS`. |
+| `VITE_BASE_PATH` | Базовый путь для сборки (актуально для GitHub Pages). |
+| `VITE_GIGACHAT_PROXY_BASE` | Опционально: внешний URL прокси `.../api/gigachat` для статического хостинга без serverless. |
 
-В продакшне секреты GigaChat задавайте в GitHub **Secrets** (Pages) или в панели другого хостинга.
+> Секреты храните только в переменных окружения (`.env`, Vercel Environment Variables, GitHub Secrets), не в коде.
 
+## Деплой
 
+Рекомендуемый вариант — **Vercel**:
 
+1. Import Project из GitHub.
+2. Framework: `Vite`.
+3. Добавить Environment Variables:
+   - `VITE_GIGACHAT_AUTHORIZATION_KEY`
+   - `VITE_GIGACHAT_SCOPE`
+4. Нажать **Deploy**.
 
-## Тесты
+Для Vercel в проекте уже есть serverless-прокси `api/gigachat/*`, чтобы обходить CORS при запросах к GigaChat.
 
-```bash
-npm test
-```
+## Самопроверка перед сдачей
 
-Режим наблюдения: `npm run test:watch`.
+- [ ] Есть ссылка на GitHub репозиторий.
+- [ ] README заполнен (Демо, Стек, Запуск локально, Env).
+- [ ] Приложение открывается по публичной ссылке.
+- [ ] Токен GigaChat хранится только в env.
+- [ ] Поиск работает по названию и содержимому чатов.
+- [ ] Переименование/удаление чатов работает.
+- [ ] Ошибки изолированы через `ErrorBoundary`.
+- [ ] В репозитории есть `docs/bundle-analysis.png`.
