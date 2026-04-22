@@ -1,5 +1,17 @@
 import { randomUUID } from 'node:crypto'
+import { setDefaultResultOrder } from 'node:dns'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+
+// Часть хостов Sber некорректно отвечает по IPv6 из облака; браузер/PowerShell часто уходят в IPv4.
+try {
+  setDefaultResultOrder('ipv4first')
+} catch {
+  /* ignore */
+}
+
+/** Node fetch (undici) шлёт нестандартный UA; некоторые шлюзы отвечают 500. Ближе к PowerShell/браузеру. */
+const UPSTREAM_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
 function cors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -25,6 +37,13 @@ function normalizeAuthValue(raw: string | undefined) {
 }
 
 function scopeFromRequestBody(body: unknown): string {
+  if (Buffer.isBuffer(body)) {
+    try {
+      return new URLSearchParams(body.toString('utf8')).get('scope') ?? ''
+    } catch {
+      return ''
+    }
+  }
   if (typeof body === 'object' && body !== null && 'scope' in body) {
     return String((body as Record<string, unknown>).scope ?? '')
   }
@@ -82,6 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       Accept: 'application/json',
       Authorization: `Basic ${authValue}`,
       RqUID: rquid,
+      'User-Agent': UPSTREAM_UA,
     },
     body: bodyString,
   })
@@ -97,6 +117,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       diagnostics: {
         authSource,
         scope,
+        hint:
+          upstream.status === 500
+            ? 'Если тот же ключ с вашего ПК выдаёт токен, а из Vercel — 500, часто виноваты фильтрация по IP/сети облака или отличие TLS/UA; после деплоя проверьте снова.'
+            : undefined,
       },
     })
   }

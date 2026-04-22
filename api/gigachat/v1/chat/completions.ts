@@ -1,6 +1,16 @@
+import { setDefaultResultOrder } from 'node:dns'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
+
+try {
+  setDefaultResultOrder('ipv4first')
+} catch {
+  /* ignore */
+}
+
+const UPSTREAM_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
 export const config = {
   maxDuration: 120,
@@ -27,6 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     headers: {
       'Content-Type': 'application/json',
       Accept: (req.headers.accept as string) || 'application/json',
+      'User-Agent': UPSTREAM_UA,
       ...(auth ? { Authorization: auth as string } : {}),
     },
     body: JSON.stringify(req.body),
