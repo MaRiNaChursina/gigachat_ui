@@ -35,7 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const fromEnv = normalizeAuthValue(
     process.env.GIGACHAT_AUTHORIZATION_KEY || process.env.VITE_GIGACHAT_AUTHORIZATION_KEY,
   )
-  const authValue = fromHeader || fromEnv
+  // В проде приоритет у server-side env в Vercel (она может быть новее, чем встроенная во фронт переменная).
+  const authValue = fromEnv || fromHeader
   if (!authValue) {
     return res.status(500).json({
       error: {
@@ -65,3 +66,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (ct) res.setHeader('Content-Type', ct)
   return res.status(upstream.status).send(text)
 }
+
