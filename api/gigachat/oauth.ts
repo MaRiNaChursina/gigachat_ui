@@ -7,6 +7,14 @@ function cors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, RqUID, Accept')
 }
 
+function normalizeAuthValue(raw: string | undefined) {
+  if (!raw) return ''
+  let v = raw.trim()
+  if (/^basic\b/i.test(v)) v = v.replace(/^basic\b\s*/i, '')
+  v = v.replace(/\s+/g, '')
+  return v
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   cors(res)
   if (req.method === 'OPTIONS') {
@@ -16,14 +24,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).end('Method Not Allowed')
   }
 
-  const bodyString =
-    typeof req.body === 'string'
-      ? req.body
-      : req.body && typeof req.body === 'object'
-        ? new URLSearchParams(req.body as Record<string, string>).toString()
-        : ''
+  const reqScope =
+    typeof req.body === 'object' && req.body && 'scope' in req.body
+      ? String((req.body as Record<string, unknown>).scope ?? '')
+      : ''
+  const scope = reqScope || process.env.VITE_GIGACHAT_SCOPE || 'GIGACHAT_API_PERS'
+  const bodyString = new URLSearchParams({ scope }).toString()
 
-  const auth = req.headers.authorization
+  const fromHeader = normalizeAuthValue(req.headers.authorization)
+  const fromEnv = normalizeAuthValue(
+    process.env.GIGACHAT_AUTHORIZATION_KEY || process.env.VITE_GIGACHAT_AUTHORIZATION_KEY,
+  )
+  const authValue = fromHeader || fromEnv
+  if (!authValue) {
+    return res.status(500).json({
+      error: {
+        code: 'CONFIG_ERROR',
+        message:
+          'Authorization key is missing. Set GIGACHAT_AUTHORIZATION_KEY or VITE_GIGACHAT_AUTHORIZATION_KEY in Vercel.',
+      },
+    })
+  }
+
   const rawRq = req.headers['rquid'] ?? req.headers['RqUID']
   const rquid = Array.isArray(rawRq) ? rawRq[0] : rawRq ?? randomUUID()
 
@@ -32,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
-      ...(auth ? { Authorization: auth } : {}),
+      Authorization: `Basic ${authValue}`,
       RqUID: rquid,
     },
     body: bodyString,
