@@ -85,11 +85,13 @@ export async function gigachatChatCompletion({
   const rawKey = import.meta.env.VITE_GIGACHAT_AUTHORIZATION_KEY as string | undefined
   const scope = normalizeScope(import.meta.env.VITE_GIGACHAT_SCOPE as string | undefined, 'GIGACHAT_API_PERS')
 
-  if (!rawKey?.trim()) {
+  // В локальной разработке ключ обязателен (браузер -> dev proxy -> Sber).
+  // В проде на Vercel можно не передавать VITE_* ключ: serverless-функция возьмет server env.
+  if (import.meta.env.DEV && !rawKey?.trim()) {
     throw new Error('Не задана переменная окружения VITE_GIGACHAT_AUTHORIZATION_KEY')
   }
 
-  const authorizationKey = normalizeGigachatAuthorizationKey(rawKey)
+  const authorizationKey = rawKey?.trim() ? normalizeGigachatAuthorizationKey(rawKey) : undefined
 
   const token = await getAccessToken({ authorizationKey, scope })
 
@@ -174,7 +176,7 @@ export async function gigachatChatCompletion({
   return { text: fullText }
 }
 
-async function getAccessToken({ authorizationKey, scope }: { authorizationKey: string; scope: string }) {
+async function getAccessToken({ authorizationKey, scope }: { authorizationKey?: string; scope: string }) {
   const rqUID = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}`
 
   const res = await fetch(gigachatOAuthUrl(), {
@@ -182,7 +184,7 @@ async function getAccessToken({ authorizationKey, scope }: { authorizationKey: s
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
-      Authorization: `Basic ${authorizationKey}`,
+      ...(authorizationKey ? { Authorization: `Basic ${authorizationKey}` } : {}),
       RqUID: rqUID,
     },
     body: new URLSearchParams({ scope }),
