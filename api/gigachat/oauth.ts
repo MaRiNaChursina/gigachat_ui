@@ -37,12 +37,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   )
   // В проде приоритет у server-side env в Vercel (она может быть новее, чем встроенная во фронт переменная).
   const authValue = fromEnv || fromHeader
+  const authSource = fromEnv ? 'env' : fromHeader ? 'header' : 'none'
   if (!authValue) {
     return res.status(500).json({
       error: {
         code: 'CONFIG_ERROR',
         message:
           'Authorization key is missing. Set GIGACHAT_AUTHORIZATION_KEY or VITE_GIGACHAT_AUTHORIZATION_KEY in Vercel.',
+      },
+      diagnostics: {
+        authSource,
+        scope,
       },
     })
   }
@@ -63,7 +68,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const text = await upstream.text()
   const ct = upstream.headers.get('content-type')
+  if (!upstream.ok) {
+    return res.status(upstream.status).json({
+      error: {
+        code: String(upstream.status),
+        message: text || upstream.statusText,
+      },
+      diagnostics: {
+        authSource,
+        scope,
+      },
+    })
+  }
+
   if (ct) res.setHeader('Content-Type', ct)
   return res.status(upstream.status).send(text)
 }
-
