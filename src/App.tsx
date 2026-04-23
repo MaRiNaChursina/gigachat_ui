@@ -1,6 +1,7 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { ChatPageLazy, HomePageLazy } from './app/router/routes'
+import { gigachatGetModels } from './api/gigachat'
 import { AuthForm } from './components/auth/AuthForm'
 import { AppLayout } from './components/layout/AppLayout'
 import { useAuth } from './features/auth/useAuth'
@@ -48,6 +49,9 @@ function SidebarFallback() {
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [modelsLoading, setModelsLoading] = useState(false)
+  const [modelsError, setModelsError] = useState<string | null>(null)
   const { isAuthed, login, logout } = useAuth()
   const chat = useChatStore()
   const { settings, setSettings, settingsOpen, setSettingsOpen, defaultSettings } = useSettingsTheme()
@@ -74,8 +78,15 @@ export default function App() {
   )
 
   const handleSend = useCallback(
-    (text: string) => chat.sendMessage(text, gigachatSendOptions),
-    [chat.sendMessage, gigachatSendOptions],
+    (text: string) => {
+      if (availableModels.length > 0 && !availableModels.includes(gigachatSendOptions.model)) {
+        window.alert(`Модель ${gigachatSendOptions.model} недоступна для текущего ключа. Выберите модель в настройках.`)
+        setSettingsOpen(true)
+        return Promise.resolve()
+      }
+      return chat.sendMessage(text, gigachatSendOptions)
+    },
+    [availableModels, chat.sendMessage, gigachatSendOptions, setSettingsOpen],
   )
 
   const handleStop = useCallback(() => chat.stopGeneration(), [chat.stopGeneration])
@@ -126,6 +137,35 @@ export default function App() {
 
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), [setSettingsOpen])
   const handleOpenSidebar = useCallback(() => setSidebarOpen(true), [])
+
+  const loadModels = useCallback(async () => {
+    setModelsLoading(true)
+    setModelsError(null)
+    try {
+      const models = await gigachatGetModels()
+      const ids = models
+        .map((m) => m.id?.trim())
+        .filter((id): id is string => Boolean(id))
+      setAvailableModels(Array.from(new Set(ids)))
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error('Не удалось загрузить список моделей')
+      setModelsError(err.message)
+    } finally {
+      setModelsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!settingsOpen) return
+    void loadModels()
+  }, [settingsOpen, loadModels])
+
+  useEffect(() => {
+    if (modelsLoading || modelsError) return
+    if (availableModels.length === 0) return
+    if (availableModels.includes(settings.model)) return
+    setSettings((prev) => ({ ...prev, model: availableModels[0] ?? prev.model }))
+  }, [availableModels, modelsError, modelsLoading, setSettings, settings.model])
 
   if (!isAuthed) {
     return <AuthForm onLogin={login} />
@@ -183,6 +223,10 @@ export default function App() {
         <SettingsPanelLazy
           open={settingsOpen}
           value={settings}
+          availableModels={availableModels}
+          modelsLoading={modelsLoading}
+          modelsError={modelsError}
+          onReloadModels={() => void loadModels()}
           onChange={setSettings}
           onClose={() => setSettingsOpen(false)}
           onSave={() => setSettingsOpen(false)}

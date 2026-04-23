@@ -4,10 +4,10 @@
 
 ## Демо
 
-- **Репозиторий:** `https://github.com/<username>/<repo>`
-- **Публичное приложение:** `https://YOUR_PROJECT.vercel.app`
-- **Скриншоты/видео работы:** добавьте сюда 2-4 скриншота или ссылку на запись экрана.
-- **Скриншот анализа бандла:** `docs/bundle-analysis.png`
+- **Репозиторий:** `https://github.com/MaRiNaChursina/gigachat_ui`
+- **Публичное приложение:** `https://gigachat-ui-three.vercel.app`
+- **Скриншоты/видео работы:**
+
 
 ## Стек
 
@@ -28,7 +28,7 @@
 
 1. Клонировать репозиторий:
    ```bash
-   git clone https://github.com/<username>/<repo>.git
+   git clone https://github.com/MaRiNaChursina/gigachat_ui.git
    cd frontend
    ```
 2. Установить зависимости:
@@ -57,9 +57,8 @@ npm run analyze
 | `VITE_GIGACHAT_AUTHORIZATION_KEY` | Authorization Key (base64) для получения OAuth токена GigaChat. Передавать без префикса `Basic `. |
 | `VITE_GIGACHAT_SCOPE` | Scope для OAuth. Обычно `GIGACHAT_API_PERS`. |
 | `VITE_BASE_PATH` | Базовый путь для сборки (актуально для GitHub Pages). |
-| `VITE_GIGACHAT_PROXY_BASE` | Опционально: внешний URL прокси `.../api/gigachat` для статического хостинга без serverless. |
+| `VITE_GIGACHAT_PROXY_BASE` | Опционально: внешний URL backend-прокси `.../api/gigachat` (используется и в dev, и в prod как приоритетный fallback). |
 
-> Секреты храните только в переменных окружения (`.env`, Vercel Environment Variables, GitHub Secrets), не в коде.
 
 ## Деплой
 
@@ -74,13 +73,3 @@ npm run analyze
 
 Для Vercel в проекте уже есть serverless-прокси `api/gigachat/*`, чтобы обходить CORS при запросах к GigaChat.
 
-## Самопроверка перед сдачей
-
-- [ ] Есть ссылка на GitHub репозиторий.
-- [ ] README заполнен (Демо, Стек, Запуск локально, Env).
-- [ ] Приложение открывается по публичной ссылке.
-- [ ] Токен GigaChat хранится только в env.
-- [ ] Поиск работает по названию и содержимому чатов.
-- [ ] Переименование/удаление чатов работает.
-- [ ] Ошибки изолированы через `ErrorBoundary`.
-- [ ] В репозитории есть `docs/bundle-analysis.png`.

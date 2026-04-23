@@ -2,6 +2,12 @@ import type { ChatMessageContextRole } from '../state/chat/types'
 
 type GigachatRole = 'user' | 'assistant' | 'system'
 
+export type GigachatModel = {
+  id: string
+  object?: string
+  owned_by?: string
+}
+
 export type GigachatChatCompletionParams = {
   model: string
   messages: { role: ChatMessageContextRole; content: string }[]
@@ -25,11 +31,7 @@ type GigachatStreamEvent =
     }
   | [string]
 
-/**
- * В dev Vite проксирует на Sber (vite.config).
- * В prod — тот же origin `/api/gigachat/*` (serverless на Vercel, см. `api/gigachat/`), иначе CORS.
- * Для статики без API (например только GitHub Pages) задайте полный URL прокси: VITE_GIGACHAT_PROXY_BASE.
- */
+
 function gigachatProxyBase(): string {
   const custom = (import.meta.env.VITE_GIGACHAT_PROXY_BASE as string | undefined)?.trim()
   if (custom) return custom.replace(/\/$/, '')
@@ -38,16 +40,27 @@ function gigachatProxyBase(): string {
 }
 
 function gigachatOAuthUrl() {
+  const custom = gigachatProxyBase()
+  if (custom) return `${custom}/oauth`
   if (import.meta.env.DEV) return '/__proxy/gigachat/oauth'
-  return `${gigachatProxyBase()}/oauth`
+  return '/api/gigachat/oauth'
 }
 
 function gigachatChatCompletionsUrl() {
+  const custom = gigachatProxyBase()
+  if (custom) return `${custom}/v1/chat/completions`
   if (import.meta.env.DEV) return '/__proxy/gigachat/api/v1/chat/completions'
-  return `${gigachatProxyBase()}/v1/chat/completions`
+  return '/api/gigachat/v1/chat/completions'
 }
 
-/** Убирает типичные ошибки .env: пробелы, CRLF, лишний префикс Basic, кавычки; при необходимости кодирует «id:secret» в Base64. */
+function gigachatModelsUrl() {
+  const custom = gigachatProxyBase()
+  if (custom) return `${custom}/v1/models`
+  if (import.meta.env.DEV) return '/__proxy/gigachat/api/v1/models'
+  return '/api/gigachat/v1/models'
+}
+
+
 export function normalizeGigachatAuthorizationKey(raw: string): string {
   let k = raw.trim()
   if ((k.startsWith('"') && k.endsWith('"')) || (k.startsWith("'") && k.endsWith("'"))) {
@@ -56,9 +69,9 @@ export function normalizeGigachatAuthorizationKey(raw: string): string {
   if (/^basic\b/i.test(k)) {
     k = k.replace(/^basic\b\s*/i, '').trim()
   }
-  // Иногда ключ копируется с переносами/пробелами из UI — удаляем всю whitespace-разметку.
+
   k = k.replace(/\s+/g, '')
-  // В кабинете дают готовый Base64; если вставили сырую пару client_id:client_secret:
+
   const looksLikeIdSecretPair = /^[\w.-]+:[\w.-]+$/.test(k) && k.length < 120 && !/[+/]{2}/.test(k)
   if (looksLikeIdSecretPair && typeof btoa === 'function') {
     k = btoa(k)
@@ -85,8 +98,7 @@ export async function gigachatChatCompletion({
   const rawKey = import.meta.env.VITE_GIGACHAT_AUTHORIZATION_KEY as string | undefined
   const scope = normalizeScope(import.meta.env.VITE_GIGACHAT_SCOPE as string | undefined, 'GIGACHAT_API_PERS')
 
-  // В локальной разработке ключ обязателен (браузер -> dev proxy -> Sber).
-  // В проде на Vercel можно не передавать VITE_* ключ: serverless-функция возьмет server env.
+ 
   if (import.meta.env.DEV && !rawKey?.trim()) {
     throw new Error('Не задана переменная окружения VITE_GIGACHAT_AUTHORIZATION_KEY')
   }
@@ -141,7 +153,6 @@ export async function gigachatChatCompletion({
     if (done) break
     buffer += decoder.decode(value, { stream: true })
 
-    // SSE events are separated by blank lines.
     const parts = buffer.split(/\n\n/)
     buffer = parts.pop() ?? ''
 
@@ -152,7 +163,6 @@ export async function gigachatChatCompletion({
         continue
       }
 
-      // Robustly extract data payload (supports `data:` on its own line).
       const firstDataIdx = part.indexOf('data:')
       const dataStr = part.slice(firstDataIdx + 'data:'.length).trim()
       if (!dataStr) continue
@@ -168,12 +178,40 @@ export async function gigachatChatCompletion({
           onDelta?.(chunk)
         }
       } catch {
-        // ignore malformed chunk
+
       }
     }
   }
 
   return { text: fullText }
+}
+
+export async function gigachatGetModels(): Promise<GigachatModel[]> {
+  const rawKey = import.meta.env.VITE_GIGACHAT_AUTHORIZATION_KEY as string | undefined
+  const scope = normalizeScope(import.meta.env.VITE_GIGACHAT_SCOPE as string | undefined, 'GIGACHAT_API_PERS')
+
+  if (import.meta.env.DEV && !rawKey?.trim()) {
+    throw new Error('Не задана переменная окружения VITE_GIGACHAT_AUTHORIZATION_KEY')
+  }
+
+  const authorizationKey = rawKey?.trim() ? normalizeGigachatAuthorizationKey(rawKey) : undefined
+  const token = await getAccessToken({ authorizationKey, scope })
+
+  const res = await fetch(gigachatModelsUrl(), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`GigaChat models error ${res.status}: ${text || res.statusText}`)
+  }
+
+  const json = (await res.json()) as { data?: GigachatModel[] }
+  return Array.isArray(json.data) ? json.data : []
 }
 
 async function getAccessToken({ authorizationKey, scope }: { authorizationKey?: string; scope: string }) {

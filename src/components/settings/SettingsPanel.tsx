@@ -3,7 +3,7 @@ import { Slider } from '../ui/Slider'
 import { Toggle } from '../ui/Toggle'
 import cls from './SettingsPanel.module.css'
 
-export type ModelId = 'GigaChat' | 'GigaChat-Plus' | 'GigaChat-Pro' | 'GigaChat-Max'
+export type ModelId = string
 export type ThemeId = 'dark' | 'light'
 
 export type SettingsState = {
@@ -19,14 +19,33 @@ export type SettingsState = {
 export type SettingsPanelProps = {
   open: boolean
   value: SettingsState
+  availableModels?: string[]
+  modelsLoading?: boolean
+  modelsError?: string | null
+  onReloadModels?: () => void
   onChange: (next: SettingsState) => void
   onClose: () => void
   onSave: () => void
   onReset: () => void
 }
 
-export function SettingsPanel({ open, value, onChange, onClose, onSave, onReset }: SettingsPanelProps) {
+export function SettingsPanel({
+  open,
+  value,
+  availableModels,
+  modelsLoading,
+  modelsError,
+  onReloadModels,
+  onChange,
+  onClose,
+  onSave,
+  onReset,
+}: SettingsPanelProps) {
   if (!open) return null
+  const modelOptions = availableModels?.length
+    ? availableModels
+    : ['GigaChat', 'GigaChat-Plus', 'GigaChat-Pro', 'GigaChat-Max']
+  const modelExists = modelOptions.includes(value.model)
 
   return (
     <div
@@ -54,11 +73,24 @@ export function SettingsPanel({ open, value, onChange, onClose, onSave, onReset 
               value={value.model}
               onChange={(e) => onChange({ ...value, model: e.target.value as ModelId })}
             >
-              <option value="GigaChat">GigaChat</option>
-              <option value="GigaChat-Plus">GigaChat-Plus</option>
-              <option value="GigaChat-Pro">GigaChat-Pro</option>
-              <option value="GigaChat-Max">GigaChat-Max</option>
+              {modelOptions.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
             </select>
+            {modelsLoading ? <div className={cls.hint}>Проверка доступных моделей…</div> : null}
+            {modelsError ? (
+              <div className={cls.errorRow}>
+                <span className={cls.errorText}>{modelsError}</span>
+                <Button type="button" variant="ghost" onClick={onReloadModels}>
+                  Обновить
+                </Button>
+              </div>
+            ) : null}
+            {!modelsError && !modelsLoading && !modelExists ? (
+              <div className={cls.warnText}>Текущая модель недоступна для этого ключа. Выберите из списка.</div>
+            ) : null}
           </div>
 
           <Slider

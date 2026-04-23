@@ -2,14 +2,14 @@ import { randomUUID } from 'node:crypto'
 import { setDefaultResultOrder } from 'node:dns'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-// Часть хостов Sber некорректно отвечает по IPv6 из облака; браузер/PowerShell часто уходят в IPv4.
+
 try {
   setDefaultResultOrder('ipv4first')
 } catch {
-  /* ignore */
+
 }
 
-/** Node fetch (undici) шлёт нестандартный UA; некоторые шлюзы отвечают 500. Ближе к PowerShell/браузеру. */
+
 const UPSTREAM_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
@@ -19,7 +19,7 @@ function cors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, RqUID, Accept')
 }
 
-/** Как `normalizeGigachatAuthorizationKey` во фронте: кавычки, Basic, пробелы; при необходимости base64 для пары id:secret. */
+
 function normalizeAuthValue(raw: string | undefined) {
   if (!raw) return ''
   let v = raw.trim()
@@ -74,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const fromEnv = normalizeAuthValue(
     process.env.GIGACHAT_AUTHORIZATION_KEY || process.env.VITE_GIGACHAT_AUTHORIZATION_KEY,
   )
-  // В проде приоритет у server-side env в Vercel (она может быть новее, чем встроенная во фронт переменная).
+
   const authValue = fromEnv || fromHeader
   const authSource = fromEnv ? 'env' : fromHeader ? 'header' : 'none'
   if (!authValue) {
