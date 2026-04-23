@@ -37,7 +37,10 @@ export default defineConfig(({ mode }) => {
         '/__proxy/gigachat/oauth': {
           target: 'https://ngw.devices.sberbank.ru:9443',
           changeOrigin: true,
-          secure: true,
+          // NGW может отдавать цепочку, которую локальный Node не доверяет по умолчанию.
+          // Для dev-прокси отключаем strict TLS валидацию, чтобы избежать
+          // "self-signed certificate in certificate chain".
+          secure: false,
           rewrite: () => '/api/v2/oauth',
           configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq, req) => {
@@ -51,7 +54,7 @@ export default defineConfig(({ mode }) => {
         '/__proxy/gigachat/api': {
           target: 'https://gigachat.devices.sberbank.ru',
           changeOrigin: true,
-          secure: true,
+          secure: false,
           rewrite: (path) => path.replace(/^\/__proxy\/gigachat\/api/, '/api'),
           configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq, req) => {

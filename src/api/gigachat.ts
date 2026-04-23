@@ -216,8 +216,9 @@ export async function gigachatGetModels(): Promise<GigachatModel[]> {
 
 async function getAccessToken({ authorizationKey, scope }: { authorizationKey?: string; scope: string }) {
   const rqUID = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}`
+  const url = gigachatOAuthUrl()
 
-  const res = await fetch(gigachatOAuthUrl(), {
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -230,11 +231,29 @@ async function getAccessToken({ authorizationKey, scope }: { authorizationKey?: 
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
+    type OAuthErrorPayload = {
+      diagnostics?: { authSource?: string; scope?: string; hint?: string }
+      error?: { message?: string }
+    }
+    let parsed: OAuthErrorPayload | null = null
+    try {
+      parsed = JSON.parse(text) as OAuthErrorPayload
+    } catch {
+      parsed = null
+    }
+    const details = [
+      parsed?.diagnostics?.authSource ? `authSource=${parsed.diagnostics.authSource}` : null,
+      parsed?.diagnostics?.scope ? `scope=${parsed.diagnostics.scope}` : null,
+      `oauthUrl=${url}`,
+    ]
+      .filter(Boolean)
+      .join(', ')
     const hint =
       res.status === 500
-        ? ' Проверьте ключ (одна строка Base64 из кабинета, без «Basic »), VITE_GIGACHAT_SCOPE (часто GIGACHAT_API_PERS), что ключ не отозван и dev-сервер перезапущен после правки .env.'
+        ? ` Проверьте: (1) одинаковый ключ в PowerShell, .env и Vercel; (2) scope; (3) после правки .env перезапущен dev-сервер. ${parsed?.diagnostics?.hint ?? ''}`
         : ''
-    throw new Error(`GigaChat token error ${res.status}: ${text || res.statusText}.${hint}`)
+    const upstreamMessage = parsed?.error?.message || text || res.statusText
+    throw new Error(`GigaChat token error ${res.status}: ${upstreamMessage}. [${details}]${hint}`)
   }
 
   const json = (await res.json()) as any
