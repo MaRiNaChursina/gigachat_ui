@@ -5,8 +5,8 @@
 ## Демо
 
 - **Репозиторий:** `https://github.com/MaRiNaChursina/gigachat_ui`
-- **Публичное приложение:** `https://gigachat-ui-three.vercel.app`
-- **Скриншоты/видео работы:**
+- **Публичное приложение:** `https://gigachat-ui-three.vercel.app`(API временно не работает при сборки приложения)
+- **Видео работы:** https://drive.google.com/file/d/1o9LVuA-0Uf1hUlmZhfCOVAl-mMLF7aMB/view?usp=drive_link
 
 
 ## Стек
