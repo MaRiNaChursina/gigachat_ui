@@ -53,6 +53,11 @@ export function Message({ message, variant, onCopy }: MessageProps) {
         </div>
 
         <div className={cls.content}>
+          {message.image ? (
+            <div className={cls.imageWrap}>
+              <img src={message.image.dataUrl} alt={message.image.name || 'user image'} className={cls.image} />
+            </div>
+          ) : null}
           <Suspense fallback={<div className={cls.mdFallback}>{message.content}</div>}>
             <MessageMarkdownBody content={message.content} />
           </Suspense>

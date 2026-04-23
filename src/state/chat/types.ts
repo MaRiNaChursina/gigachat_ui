@@ -35,7 +35,6 @@ export type ChatAction =
   | { type: 'REPLACE_STATE'; payload: ChatState }
 
 export type ChatSendMessageParams = {
-  text: string
   systemPrompt?: string
   model: string
   temperature?: number

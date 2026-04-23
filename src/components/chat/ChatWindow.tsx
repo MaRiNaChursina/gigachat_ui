@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Message } from '../../types/message'
+import type { MessageImage } from '../../types/message'
 import { useChatStore } from '../../state/chat/ChatProvider'
 import { ErrorBoundary } from '../ErrorBoundary'
 import { EmptyState } from '../empty/EmptyState'
@@ -14,7 +15,7 @@ export type ChatWindowProps = {
   chatTitle: string
   messages: Message[]
   isLoading: boolean
-  onSend: (text: string) => void
+  onSend: (payload: { text: string; image?: MessageImage }) => void
   onStop: () => void
   onOpenSettings: () => void
   onOpenSidebar?: () => void

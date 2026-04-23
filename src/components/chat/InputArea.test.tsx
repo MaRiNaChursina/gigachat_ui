@@ -14,7 +14,7 @@ describe('InputArea', () => {
     await user.click(screen.getByRole('button', { name: 'Отправить' }))
 
     expect(onSend).toHaveBeenCalledTimes(1)
-    expect(onSend).toHaveBeenCalledWith('hello')
+    expect(onSend).toHaveBeenCalledWith({ text: 'hello', image: undefined })
   })
 
   it('calls onSend on Enter (without Shift) when input is non-empty', async () => {
@@ -27,7 +27,7 @@ describe('InputArea', () => {
     await user.type(field, 'hi{Enter}')
 
     expect(onSend).toHaveBeenCalledTimes(1)
-    expect(onSend).toHaveBeenCalledWith('hi')
+    expect(onSend).toHaveBeenCalledWith({ text: 'hi', image: undefined })
   })
 
   it('disables «Отправить» when the field is empty or whitespace-only', () => {

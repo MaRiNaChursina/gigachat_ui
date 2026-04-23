@@ -1,6 +1,9 @@
 import type { ChatMessageContextRole } from '../state/chat/types'
 
 type GigachatRole = 'user' | 'assistant' | 'system'
+type GigachatContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } | string }
 
 export type GigachatModel = {
   id: string
@@ -10,7 +13,7 @@ export type GigachatModel = {
 
 export type GigachatChatCompletionParams = {
   model: string
-  messages: { role: ChatMessageContextRole; content: string }[]
+  messages: { role: ChatMessageContextRole; content: string | GigachatContentPart[] }[]
   stream: boolean
   temperature?: number
   topP?: number
@@ -107,25 +110,55 @@ export async function gigachatChatCompletion({
 
   const token = await getAccessToken({ authorizationKey, scope })
 
-  const res = await fetch(gigachatChatCompletionsUrl(), {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: messages.map((m) => ({ role: m.role as GigachatRole, content: m.content })),
-      stream,
-      temperature,
-      top_p: topP,
-      max_tokens: maxTokens,
-      repetition_penalty: repetitionPenalty ?? 1,
-      update_interval: 0,
-    }),
-    signal: abortController.signal,
-  })
+  const hasMultimodal = messages.some((m) => Array.isArray(m.content))
+  const commonPayload = {
+    model,
+    stream,
+    temperature,
+    top_p: topP,
+    max_tokens: maxTokens,
+    repetition_penalty: repetitionPenalty ?? 1,
+    update_interval: 0,
+  }
+  const makeMessages = (imageUrlAsString: boolean) =>
+    messages.map((m) => ({
+      role: m.role as GigachatRole,
+      content: Array.isArray(m.content)
+        ? m.content.map((part) => {
+            if (part.type !== 'image_url') return part
+            const raw = typeof part.image_url === 'string' ? part.image_url : part.image_url.url
+            return imageUrlAsString
+              ? ({ type: 'image_url', image_url: raw } as const)
+              : ({ type: 'image_url', image_url: { url: raw } } as const)
+          })
+        : m.content,
+    }))
+
+  const doRequest = (imageUrlAsString: boolean) =>
+    fetch(gigachatChatCompletionsUrl(), {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        ...commonPayload,
+        messages: makeMessages(imageUrlAsString),
+      }),
+      signal: abortController.signal,
+    })
+
+  let res = await doRequest(false)
+  if (!res.ok && res.status === 400 && hasMultimodal) {
+    const firstErrText = await res.text().catch(() => '')
+    if (/invalid json syntax/i.test(firstErrText)) {
+      // Для некоторых конфигураций GigaChat multimodal требует image_url как строку, а не объект {url}.
+      res = await doRequest(true)
+    } else {
+      throw new Error(`GigaChat error ${res.status}: ${firstErrText || res.statusText}`)
+    }
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')

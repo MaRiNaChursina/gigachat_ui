@@ -6,6 +6,7 @@ import type { Message } from '../../types/message'
 import { chatReducer } from './chatReducer'
 import { loadChatStateFromStorage, saveChatStateToStorage } from './chatStorage'
 import { gigachatChatCompletion } from '../../api/gigachat'
+import type { MessageImage } from '../../types/message'
 
 export type ChatStoreValue = {
   state: ChatState
@@ -15,7 +16,7 @@ export type ChatStoreValue = {
   createChat: () => string
   renameChat: (chatId: string, title: string) => void
   deleteChat: (chatId: string) => void
-  sendMessage: (text: string, params: Omit<ChatSendMessageParams, 'text'>) => Promise<void>
+  sendMessage: (payload: { text: string; image?: MessageImage }, params: ChatSendMessageParams) => Promise<void>
   stopGeneration: () => void
   clearError: () => void
 }
@@ -118,11 +119,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const sendMessage = useCallback(
-    async (text: string, params: Omit<ChatSendMessageParams, 'text'>) => {
+    async (payload: { text: string; image?: MessageImage }, params: ChatSendMessageParams) => {
       const activeChatId = state.activeChatId
       if (!activeChatId) return
-      const trimmed = text.trim()
-      if (!trimmed) return
+      const trimmed = payload.text.trim()
+      const hasImage = Boolean(payload.image?.dataUrl)
+      if (!trimmed && !hasImage) return
       if (state.isLoading) return
 
       const todayIso = getTodayIsoDate()
@@ -139,6 +141,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         role: 'user',
         timestamp: getNowTimeLabel(),
         content: trimmed,
+        image: payload.image,
       }
 
       dispatch({
@@ -151,7 +154,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const prevMessages = currentChat?.messages ?? []
       const wasEmpty = prevMessages.length === 0
       if (wasEmpty) {
-        const nextTitle = getDefaultChatTitle(state.chats.length + 1, trimmed)
+        const nextTitle = getDefaultChatTitle(state.chats.length + 1, trimmed || 'Изображение')
         dispatch({ type: 'RENAME_CHAT', payload: { chatId: activeChatId, title: nextTitle } })
       }
 
@@ -168,13 +171,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         payload: { chatId: activeChatId, message: assistantMessage, lastMessageAt: todayIso },
       })
 
-      const contextMessages: { role: ChatMessageContextRole; content: string }[] = []
+      const contextMessages: Array<{
+        role: ChatMessageContextRole
+        content:
+          | string
+          | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>
+      }> = []
       if (params.systemPrompt?.trim()) {
         contextMessages.push({ role: 'system', content: params.systemPrompt.trim() })
       }
-      for (const m of prevMessages) contextMessages.push({ role: m.role, content: m.content })
+      for (const m of prevMessages) {
+        if (m.image?.dataUrl) {
+          const parts: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = []
+          if (m.content.trim()) parts.push({ type: 'text', text: m.content.trim() })
+          parts.push({ type: 'image_url', image_url: { url: m.image.dataUrl } })
+          contextMessages.push({ role: m.role, content: parts })
+          continue
+        }
+        contextMessages.push({ role: m.role, content: m.content })
+      }
       // Include the current user message as well (it was not yet present in `prevMessages` from closure).
-      contextMessages.push({ role: 'user', content: trimmed })
+      if (payload.image?.dataUrl) {
+        const parts: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = []
+        if (trimmed) parts.push({ type: 'text', text: trimmed })
+        parts.push({ type: 'image_url', image_url: { url: payload.image.dataUrl } })
+        contextMessages.push({ role: 'user', content: parts })
+      } else {
+        contextMessages.push({ role: 'user', content: trimmed })
+      }
 
       try {
         const result = await gigachatChatCompletion({

@@ -1,8 +1,9 @@
+import type { MessageImage } from '../types/message'
 import { ChatWindow } from '../components/chat/ChatWindow'
 import { useChatStore } from '../state/chat/ChatProvider'
 
 export type HomePageProps = {
-  onSend: (text: string) => void
+  onSend: (payload: { text: string; image?: MessageImage }) => void
   onStop: () => void
   onOpenSettings: () => void
   onOpenSidebar: () => void

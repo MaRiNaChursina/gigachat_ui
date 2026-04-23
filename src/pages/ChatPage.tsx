@@ -2,9 +2,10 @@ import { useEffect } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ChatWindow } from '../components/chat/ChatWindow'
 import { useChatStore } from '../state/chat/ChatProvider'
+import type { MessageImage } from '../types/message'
 
 export type ChatPageProps = {
-  onSend: (text: string) => void
+  onSend: (payload: { text: string; image?: MessageImage }) => void
   onStop: () => void
   onOpenSettings: () => void
   onOpenSidebar: () => void

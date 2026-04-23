@@ -4,6 +4,7 @@ import { ChatPageLazy, HomePageLazy } from './app/router/routes'
 import { gigachatGetModels } from './api/gigachat'
 import { AuthForm } from './components/auth/AuthForm'
 import { AppLayout } from './components/layout/AppLayout'
+import type { MessageImage } from './types/message'
 import { useAuth } from './features/auth/useAuth'
 import { useSettingsTheme } from './features/settings/useSettingsTheme'
 import { useChatStore } from './state/chat/ChatProvider'
@@ -78,13 +79,13 @@ export default function App() {
   )
 
   const handleSend = useCallback(
-    (text: string) => {
+    (payload: { text: string; image?: MessageImage }) => {
       if (availableModels.length > 0 && !availableModels.includes(gigachatSendOptions.model)) {
         window.alert(`Модель ${gigachatSendOptions.model} недоступна для текущего ключа. Выберите модель в настройках.`)
         setSettingsOpen(true)
         return Promise.resolve()
       }
-      return chat.sendMessage(text, gigachatSendOptions)
+      return chat.sendMessage(payload, gigachatSendOptions)
     },
     [availableModels, chat.sendMessage, gigachatSendOptions, setSettingsOpen],
   )
